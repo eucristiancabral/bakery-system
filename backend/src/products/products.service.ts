@@ -64,8 +64,9 @@ export class ProductsService {
     return `This action returns a #${id} product`;
   }
 
-  update(id: number, updateProductDto: any) {
-    return `This action updates a #${id} product`;
+  async update(id: number, updateData: any) {
+    await this.dataSource.getRepository(Product).update(id, updateData);
+    return this.findOne(id);
   }
 
   remove(id: number) {

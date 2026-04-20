@@ -33,7 +33,11 @@ export default function PDV() {
   const carregarProdutos = () => {
     fetch('http://localhost:3000/products')
       .then((response) => response.json())
-      .then((data) => setProdutos(data))
+      .then((data: Produto[]) => {
+        // NOVO: Filtra para mostrar na vitrine APENAS os produtos ativos
+        const produtosAtivos = data.filter(p => p.ativo !== false);
+        setProdutos(produtosAtivos);
+      })
       .catch((error) => console.error("Erro ao buscar a API:", error));
   };
 
