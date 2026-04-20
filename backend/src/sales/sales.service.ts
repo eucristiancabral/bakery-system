@@ -106,6 +106,11 @@ export class SalesService {
       }
     });
   }
-
+  // Busca todas as vendas ordenadas da mais recente para a mais antiga
+  async findAll() {
+    return this.dataSource.getRepository(Venda).find({
+      order: { criado_em: 'DESC' }
+    });
+  }
   // Os outros métodos (findAll, findOne, etc) podem ficar aqui embaixo intocados...
 }

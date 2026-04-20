@@ -4,6 +4,8 @@ interface Produto {
   id: number;
   nome: string;
   preco_venda: string;
+  // O backend do NestJS pode mandar o estoque como um objeto ou array dependendo da relação
+  stock?: { quantidade: string | number } | Array<{ quantidade: string | number }>;
 }
 
 interface ItemCarrinho {
@@ -14,23 +16,44 @@ interface ItemCarrinho {
   subtotal: number;
 }
 
-function App() {
+export default function PDV() {
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [carrinho, setCarrinho] = useState<ItemCarrinho[]>([]);
   const [formaPagamento, setFormaPagamento] = useState<string>('PIX');
 
-  useEffect(() => {
+  // Função auxiliar para extrair o estoque com segurança
+  const obterEstoque = (produto: Produto): number => {
+    if (!produto.stock) return 0;
+    if (Array.isArray(produto.stock)) {
+      return produto.stock.length > 0 ? Number(produto.stock[0].quantidade) : 0;
+    }
+    return Number(produto.stock.quantidade);
+  };
+
+  const carregarProdutos = () => {
     fetch('http://localhost:3000/products')
       .then((response) => response.json())
       .then((data) => setProdutos(data))
       .catch((error) => console.error("Erro ao buscar a API:", error));
+  };
+
+  useEffect(() => {
+    carregarProdutos();
   }, []);
 
   const adicionarAoCarrinho = (produto: Produto) => {
     const preco = Number(produto.preco_venda);
+    const estoqueDisponivel = obterEstoque(produto);
+
     setCarrinho((carrinhoAtual) => {
       const itemExistente = carrinhoAtual.find(item => item.produto_id === produto.id);
+      
+      // TRAVA 1: Verifica se o limite do estoque foi atingido ao clicar no botão
       if (itemExistente) {
+        if (itemExistente.quantidade >= estoqueDisponivel) {
+          alert(`Estoque insuficiente! Você só tem ${estoqueDisponivel} unidades de ${produto.nome}.`);
+          return carrinhoAtual;
+        }
         return carrinhoAtual.map(item => 
           item.produto_id === produto.id 
             ? { ...item, quantidade: item.quantidade + 1, subtotal: (item.quantidade + 1) * item.preco_unitario }
@@ -44,15 +67,21 @@ function App() {
     });
   };
 
-  // NOVO: Função para remover um item completamente
   const removerDoCarrinho = (produtoId: number) => {
     setCarrinho(carrinhoAtual => carrinhoAtual.filter(item => item.produto_id !== produtoId));
   };
 
-  // NOVO: Função para atualizar a quantidade via botão ou input de texto
   const atualizarQuantidade = (produtoId: number, novaQuantidade: number) => {
-    // Evita que o usuário digite zero ou números negativos no input
     if (novaQuantidade < 1) return; 
+
+    // TRAVA 2: Verifica o limite se o usuário tentar digitar no input do carrinho
+    const produtoBase = produtos.find(p => p.id === produtoId);
+    const estoqueDisponivel = produtoBase ? obterEstoque(produtoBase) : 0;
+
+    if (novaQuantidade > estoqueDisponivel) {
+      alert(`Quantidade inválida! Só restam ${estoqueDisponivel} unidades em estoque.`);
+      return;
+    }
 
     setCarrinho(carrinhoAtual => 
       carrinhoAtual.map(item => 
@@ -85,6 +114,7 @@ function App() {
         alert('✅ Venda finalizada com sucesso!');
         setCarrinho([]); 
         setFormaPagamento('PIX'); 
+        carregarProdutos(); // Recarrega os produtos para atualizar o estoque na tela!
       } else {
         const errorData = await response.json();
         alert(`❌ Erro ao vender: ${errorData.message}`);
@@ -102,18 +132,35 @@ function App() {
       <div className="w-2/3 p-6 overflow-y-auto">
         <h2 className="text-3xl font-bold mb-6 text-gray-800">Vitrine</h2>
         <div className="grid grid-cols-3 gap-4">
-          {produtos.map((produto) => (
-            <button 
-              key={produto.id} 
-              onClick={() => adicionarAoCarrinho(produto)}
-              className="bg-white p-6 rounded-xl shadow text-left cursor-pointer hover:bg-blue-50 hover:border-blue-300 transition-all border border-transparent active:scale-95"
-            >
-              <h3 className="font-semibold text-gray-700 text-lg">{produto.nome}</h3>
-              <p className="text-blue-600 font-bold mt-2 text-xl">
-                R$ {Number(produto.preco_venda).toFixed(2).replace('.', ',')}
-              </p>
-            </button>
-          ))}
+          {produtos.map((produto) => {
+            const estoque = obterEstoque(produto);
+            const semEstoque = estoque <= 0;
+
+            return (
+              <button 
+                key={produto.id} 
+                onClick={() => adicionarAoCarrinho(produto)}
+                disabled={semEstoque}
+                // Mudança de cor dinâmica se não houver estoque
+                className={`relative p-6 rounded-xl shadow text-left transition-all border 
+                  ${semEstoque 
+                    ? 'bg-gray-200 cursor-not-allowed opacity-60 border-gray-300' 
+                    : 'bg-white cursor-pointer hover:bg-blue-50 hover:border-blue-300 active:scale-95 border-transparent'
+                  }`}
+              >
+                <h3 className="font-semibold text-gray-700 text-lg pr-12">{produto.nome}</h3>
+                <p className="text-blue-600 font-bold mt-2 text-xl">
+                  R$ {Number(produto.preco_venda).toFixed(2).replace('.', ',')}
+                </p>
+                
+                {/* Badge (Etiqueta) de Estoque */}
+                <span className={`absolute top-3 right-3 text-xs font-bold px-2 py-1 rounded-full 
+                  ${semEstoque ? 'bg-red-200 text-red-800' : 'bg-green-100 text-green-800'}`}>
+                  {estoque} un.
+                </span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -130,11 +177,9 @@ function App() {
             carrinho.map((item) => (
               <div key={item.produto_id} className="flex justify-between items-start border-b border-gray-100 pb-4">
                 
-                {/* Lado Esquerdo do Item: Nome e Controles */}
                 <div className="flex-1">
                   <p className="font-semibold text-gray-700">{item.nome}</p>
                   
-                  {/* Novo bloco de controles de quantidade */}
                   <div className="flex items-center gap-2 mt-2">
                     <button 
                       onClick={() => atualizarQuantidade(item.produto_id, item.quantidade - 1)}
@@ -159,7 +204,6 @@ function App() {
                   </div>
                 </div>
 
-                {/* Lado Direito do Item: Botão X e Subtotal */}
                 <div className="flex flex-col items-end justify-between h-full ml-4">
                   <button 
                     onClick={() => removerDoCarrinho(item.produto_id)}
@@ -185,7 +229,6 @@ function App() {
             <select 
               value={formaPagamento}
               onChange={(e) => setFormaPagamento(e.target.value)}
-              // ADICIONADO: cursor-pointer
               className="w-full p-3 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
             >
               <option value="PIX">PIX</option>
@@ -205,7 +248,6 @@ function App() {
           <button 
             onClick={finalizarVenda} 
             disabled={carrinho.length === 0}
-            // ADICIONADO: cursor-pointer e cursor-not-allowed quando bloqueado
             className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-bold py-4 rounded-xl text-xl shadow-lg transition-colors cursor-pointer disabled:cursor-not-allowed active:bg-blue-800"
           >
             Finalizar Venda
@@ -216,5 +258,3 @@ function App() {
     </div>
   );
 }
-
-export default App;
