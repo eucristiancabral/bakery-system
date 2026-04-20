@@ -18,8 +18,6 @@ interface ItemCarrinho {
 function App() {
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [carrinho, setCarrinho] = useState<ItemCarrinho[]>([]);
-  
-  // NOVO: Estado para a forma de pagamento (O padrão é PIX)
   const [formaPagamento, setFormaPagamento] = useState<string>('PIX');
 
   useEffect(() => {
@@ -47,11 +45,28 @@ function App() {
     });
   };
 
+  // NOVO: Função para remover um item completamente
+  const removerDoCarrinho = (produtoId: number) => {
+    setCarrinho(carrinhoAtual => carrinhoAtual.filter(item => item.produto_id !== produtoId));
+  };
+
+  // NOVO: Função para atualizar a quantidade via botão ou input de texto
+  const atualizarQuantidade = (produtoId: number, novaQuantidade: number) => {
+    // Evita que o usuário digite zero ou números negativos no input
+    if (novaQuantidade < 1) return; 
+
+    setCarrinho(carrinhoAtual => 
+      carrinhoAtual.map(item => 
+        item.produto_id === produtoId
+          ? { ...item, quantidade: novaQuantidade, subtotal: novaQuantidade * item.preco_unitario }
+          : item
+      )
+    );
+  };
+
   const totalVenda = carrinho.reduce((acumulador, item) => acumulador + item.subtotal, 0);
 
-  // NOVO: A função que conecta o React ao NestJS!
   const finalizarVenda = async () => {
-    // 1. Montamos o JSON no formato exato do nosso CreateSaleDto
     const payload = {
       forma_pagamento: formaPagamento,
       itens: carrinho.map(item => ({
@@ -61,19 +76,16 @@ function App() {
     };
 
     try {
-      // 2. Disparamos o POST para o Backend
       const response = await fetch('http://localhost:3000/sales', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
 
       if (response.ok) {
-        alert('✅ Venda finalizada com sucesso! O estoque foi atualizado.');
-        setCarrinho([]); // Limpa o carrinho para o próximo cliente
-        setFormaPagamento('PIX'); // Reseta o pagamento
+        alert('✅ Venda finalizada com sucesso!');
+        setCarrinho([]); 
+        setFormaPagamento('PIX'); 
       } else {
         const errorData = await response.json();
         alert(`❌ Erro ao vender: ${errorData.message}`);
@@ -116,15 +128,52 @@ function App() {
           {carrinho.length === 0 ? (
             <p className="text-gray-400 text-center mt-10">O carrinho está vazio.</p>
           ) : (
-            carrinho.map((item, index) => (
-              <div key={index} className="flex justify-between items-center border-b border-gray-100 pb-2">
-                <div>
+            carrinho.map((item) => (
+              <div key={item.produto_id} className="flex justify-between items-start border-b border-gray-100 pb-4">
+                
+                {/* Lado Esquerdo do Item: Nome e Controles */}
+                <div className="flex-1">
                   <p className="font-semibold text-gray-700">{item.nome}</p>
-                  <p className="text-sm text-gray-500">{item.quantidade}x R$ {item.preco_unitario.toFixed(2).replace('.', ',')}</p>
+                  
+                  {/* Novo bloco de controles de quantidade */}
+                  <div className="flex items-center gap-2 mt-2">
+                    <button 
+                      onClick={() => atualizarQuantidade(item.produto_id, item.quantidade - 1)}
+                      disabled={item.quantidade <= 1}
+                      className="w-8 h-8 flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-600 rounded cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    >-</button>
+                    
+                    <input 
+                      type="number" 
+                      min="1"
+                      value={item.quantidade}
+                      onChange={(e) => atualizarQuantidade(item.produto_id, Number(e.target.value))}
+                      className="w-16 text-center border border-gray-300 rounded p-1 text-gray-700 outline-none focus:border-blue-500 font-semibold"
+                    />
+                    
+                    <button 
+                      onClick={() => atualizarQuantidade(item.produto_id, item.quantidade + 1)}
+                      className="w-8 h-8 flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-600 rounded cursor-pointer"
+                    >+</button>
+
+                    <p className="text-sm text-gray-500 ml-2">x R$ {item.preco_unitario.toFixed(2).replace('.', ',')}</p>
+                  </div>
                 </div>
-                <p className="font-bold text-gray-800">
-                  R$ {item.subtotal.toFixed(2).replace('.', ',')}
-                </p>
+
+                {/* Lado Direito do Item: Botão X e Subtotal */}
+                <div className="flex flex-col items-end justify-between h-full ml-4">
+                  <button 
+                    onClick={() => removerDoCarrinho(item.produto_id)}
+                    className="text-red-500 hover:text-red-700 font-bold text-sm px-2 py-1 rounded hover:bg-red-100 cursor-pointer transition-colors"
+                    title="Remover produto"
+                  >
+                    X
+                  </button>
+                  <p className="font-bold text-gray-800 mt-3">
+                    R$ {item.subtotal.toFixed(2).replace('.', ',')}
+                  </p>
+                </div>
+
               </div>
             ))
           )}
@@ -132,13 +181,13 @@ function App() {
 
         <div className="p-6 border-t border-gray-200 bg-gray-50">
           
-          {/* NOVO: Seletor de Pagamento */}
           <div className="mb-4">
             <label className="block text-sm font-semibold text-gray-600 mb-2">Forma de Pagamento</label>
             <select 
               value={formaPagamento}
               onChange={(e) => setFormaPagamento(e.target.value)}
-              className="w-full p-3 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              // ADICIONADO: cursor-pointer
+              className="w-full p-3 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
             >
               <option value="PIX">PIX</option>
               <option value="DINHEIRO">Dinheiro</option>
@@ -155,9 +204,10 @@ function App() {
           </div>
           
           <button 
-            onClick={finalizarVenda} // NOVO: Dispara a função
+            onClick={finalizarVenda} 
             disabled={carrinho.length === 0}
-            className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-bold py-4 rounded-xl text-xl shadow-lg transition-colors active:bg-blue-800"
+            // ADICIONADO: cursor-pointer e cursor-not-allowed quando bloqueado
+            className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-bold py-4 rounded-xl text-xl shadow-lg transition-colors cursor-pointer disabled:cursor-not-allowed active:bg-blue-800"
           >
             Finalizar Venda
           </button>
