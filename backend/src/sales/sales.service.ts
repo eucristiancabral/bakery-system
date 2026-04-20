@@ -109,6 +109,7 @@ export class SalesService {
   // Busca todas as vendas ordenadas da mais recente para a mais antiga
   async findAll() {
     return this.dataSource.getRepository(Venda).find({
+      relations: ['itens', 'itens.produto'], // <-- ADICIONE ESTA LINHA!
       order: { criado_em: 'DESC' }
     });
   }

@@ -44,19 +44,10 @@ export class ProductsService {
     });
   }
 
-  // Os demais métodos gerados pelo NestJS podem ficar como estão por enquanto
-  // Adicione isso abaixo do seu método 'create' no products.service.ts
   async findAll() {
-    return this.dataSource.getRepository(Product).find({
-      where: { ativo: true }, // Trazemos apenas o que pode ser vendido
-      relations: ['stock'], // Faz o JOIN automático com a tabela de estoque
-      select: {
-        id: true,
-        nome: true,
-        preco_venda: true,
-        codigo_barras: true,
-        // Não enviamos o 'custo' para o frontend do PDV por segurança (o caixa não precisa saber)
-      }
+      // Certifique-se de que NÃO existe um "where: { ativo: true }" aqui
+      return this.dataSource.getRepository(Product).find({
+      relations: ['stock'] 
     });
   }
 
