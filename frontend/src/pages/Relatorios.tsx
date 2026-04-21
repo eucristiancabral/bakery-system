@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
+import { apiFetch } from '../utils/api';
 
 // ATUALIZADO: Agora o TypeScript sabe que uma Venda possui Itens e Produtos com Custo
 interface Venda {
@@ -24,7 +25,7 @@ export default function Relatorios() {
   const [filtro, setFiltro] = useState<FiltroTempo>('HOJE');
 
   useEffect(() => {
-    fetch('http://localhost:3000/sales')
+    apiFetch('/products')
       .then(res => res.json())
       .then((data: Venda[]) => setVendas(data))
       .catch(error => console.error("Erro ao buscar vendas:", error));

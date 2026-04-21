@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { apiFetch } from '../utils/api';
 
 interface Produto {
   id: number;
@@ -31,7 +32,7 @@ export default function PDV() {
   };
 
   const carregarProdutos = () => {
-    fetch('http://localhost:3000/products')
+    apiFetch('/products')
       .then((response) => response.json())
       .then((data: Produto[]) => {
         // NOVO: Filtra para mostrar na vitrine APENAS os produtos ativos

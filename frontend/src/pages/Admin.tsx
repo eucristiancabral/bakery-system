@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { apiFetch } from '../utils/api';
 
 interface Produto {
   id: number;
@@ -27,7 +28,7 @@ export default function Admin() {
   const [termoBusca, setTermoBusca] = useState('');
 
   const carregarProdutos = () => {
-    fetch('http://localhost:3000/products')
+    apiFetch('/products')
       .then(res => res.json())
       .then((data) => setProdutos(data))
       .catch(err => console.error(err));
@@ -55,7 +56,7 @@ export default function Admin() {
       custo: custo ? Number(custo) : null,
       ativo: true
     };
-    const res = await fetch('http://localhost:3000/products', {
+    const res = await apiFetch('/products', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
@@ -80,7 +81,7 @@ export default function Admin() {
 
   // SALVAR EDIÇÃO: Envia todos os campos alterados
   const salvarEdicao = async (id: number) => {
-    const res = await fetch(`http://localhost:3000/products/${id}`, {
+    const res = await apiFetch(`/products/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

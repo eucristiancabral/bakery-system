@@ -6,7 +6,7 @@ export class Product {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Column({ unique: true })
+  @Column({ unique: true, nullable: true })
   codigo_barras!: string;
 
   @Column()
