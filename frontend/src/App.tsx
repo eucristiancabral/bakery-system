@@ -27,7 +27,8 @@ const MenuNavegacao = () => {
   };
 
   return (
-    <nav className="bg-gray-900 text-white p-4 flex justify-between items-center shadow-md">
+    // ADICIONADO 'print:hidden' AQUI PARA ESCONDER NA HORA DE IMPRIMIR O CUPOM
+    <nav className="bg-gray-900 text-white p-4 flex justify-between items-center shadow-md print:hidden">
       <div className="flex gap-6">
         <Link to="/" className="hover:text-blue-400 font-bold transition-colors">🛒 Caixa (PDV)</Link>
         
