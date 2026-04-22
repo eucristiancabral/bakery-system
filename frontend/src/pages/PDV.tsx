@@ -5,7 +5,7 @@ interface Produto {
   id: number;
   nome: string;
   preco_venda: string;
-  // O backend do NestJS pode mandar o estoque como um objeto ou array dependendo da relação
+  ativo: boolean;
   stock?: { quantidade: string | number } | Array<{ quantidade: string | number }>;
 }
 
@@ -35,7 +35,7 @@ export default function PDV() {
     apiFetch('/products')
       .then((response) => response.json())
       .then((data: Produto[]) => {
-        // NOVO: Filtra para mostrar na vitrine APENAS os produtos ativos
+        // Filtra para mostrar na vitrine APENAS os produtos ativos
         const produtosAtivos = data.filter(p => p.ativo !== false);
         setProdutos(produtosAtivos);
       })
@@ -109,9 +109,9 @@ export default function PDV() {
     };
 
     try {
-      const response = await fetch('http://localhost:3000/sales', {
+      // CORREÇÃO AQUI: Mudamos de fetch normal para apiFetch
+      const response = await apiFetch('/sales', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
 
@@ -131,7 +131,7 @@ export default function PDV() {
   };
 
   return (
-    <div className="flex h-screen bg-gray-100 font-sans overflow-hidden">
+    <div className="flex h-[calc(100vh-64px)] bg-gray-100 font-sans overflow-hidden">
       
       {/* Vitrine */}
       <div className="w-2/3 p-6 overflow-y-auto">
@@ -146,7 +146,6 @@ export default function PDV() {
                 key={produto.id} 
                 onClick={() => adicionarAoCarrinho(produto)}
                 disabled={semEstoque}
-                // Mudança de cor dinâmica se não houver estoque
                 className={`relative p-6 rounded-xl shadow text-left transition-all border 
                   ${semEstoque 
                     ? 'bg-gray-200 cursor-not-allowed opacity-60 border-gray-300' 
@@ -158,7 +157,6 @@ export default function PDV() {
                   R$ {Number(produto.preco_venda).toFixed(2).replace('.', ',')}
                 </p>
                 
-                {/* Badge (Etiqueta) de Estoque */}
                 <span className={`absolute top-3 right-3 text-xs font-bold px-2 py-1 rounded-full 
                   ${semEstoque ? 'bg-red-200 text-red-800' : 'bg-green-100 text-green-800'}`}>
                   {estoque} un.
@@ -172,7 +170,7 @@ export default function PDV() {
       {/* Cupom Fiscal */}
       <div className="w-1/3 bg-white border-l border-gray-200 shadow-2xl flex flex-col">
         <div className="p-6 border-b border-gray-100 bg-gray-50">
-          <h2 className="text-2xl font-bold text-gray-800">Cupom Fiscal</h2>
+          <h2 className="text-2xl font-bold text-gray-800">Cupom Atual</h2>
         </div>
         
         <div className="flex-1 overflow-y-auto p-6 space-y-4">

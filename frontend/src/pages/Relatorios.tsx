@@ -1,7 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { apiFetch } from '../utils/api';
 
-// ATUALIZADO: Agora o TypeScript sabe que uma Venda possui Itens e Produtos com Custo
 interface Venda {
   id: number;
   total: string;
@@ -25,22 +24,49 @@ export default function Relatorios() {
   const [filtro, setFiltro] = useState<FiltroTempo>('HOJE');
 
   useEffect(() => {
-    apiFetch('/products')
+    // CORREÇÃO 1: Mudar de '/products' para '/sales'
+    apiFetch('/sales')
       .then(res => res.json())
-      .then((data: Venda[]) => setVendas(data))
+      .then((data) => {
+        // CORREÇÃO 2: Garantir que o que chegou é uma lista (array) antes de salvar no estado
+        setVendas(Array.isArray(data) ? data : []);
+      })
       .catch(error => console.error("Erro ao buscar vendas:", error));
   }, []);
 
-  const vendasFiltradas = useMemo(() => {
+const vendasFiltradas = useMemo(() => {
     const hoje = new Date();
+
     return vendas.filter(venda => {
-      const dataVenda = new Date(venda.criado_em);
+      const stringData = venda.criado_em || (venda as any).createdAt || (venda as any).data_venda;
+      
+      if (!stringData) return filtro === 'TUDO';
+
+      const dataVenda = new Date(stringData);
+
+      if (isNaN(dataVenda.getTime())) return filtro === 'TUDO';
+
       switch (filtro) {
-        case 'HOJE': return dataVenda.toDateString() === hoje.toDateString();
-        case 'SEMANA': return Math.floor((hoje.getTime() - dataVenda.getTime()) / (1000 * 60 * 60 * 24)) <= 7;
-        case 'MES': return dataVenda.getMonth() === hoje.getMonth() && dataVenda.getFullYear() === hoje.getFullYear();
-        case 'ANO': return dataVenda.getFullYear() === hoje.getFullYear();
-        default: return true;
+        case 'HOJE': 
+          return dataVenda.getDate() === hoje.getDate() &&
+                 dataVenda.getMonth() === hoje.getMonth() &&
+                 dataVenda.getFullYear() === hoje.getFullYear();
+        
+        case 'SEMANA': 
+          const diffTempo = hoje.getTime() - dataVenda.getTime();
+          const diffDias = Math.ceil(diffTempo / (1000 * 3600 * 24));
+          return diffDias >= 0 && diffDias <= 7;
+        
+        case 'MES': 
+          return dataVenda.getMonth() === hoje.getMonth() && 
+                 dataVenda.getFullYear() === hoje.getFullYear();
+        
+        case 'ANO': 
+          return dataVenda.getFullYear() === hoje.getFullYear();
+        
+        case 'TUDO':
+        default: 
+          return true;
       }
     });
   }, [vendas, filtro]);
@@ -51,13 +77,13 @@ export default function Relatorios() {
     let custo = 0;
 
     vendasFiltradas.forEach(venda => {
-      fat += Number(venda.total);
+      fat += Number(venda.total || 0); // Proteção contra undefined
       
       // Calcula o custo dessa venda específica verificando item por item
-      if (venda.itens) {
+      if (venda.itens && Array.isArray(venda.itens)) {
         venda.itens.forEach(item => {
           const custoProduto = item.produto?.custo ? Number(item.produto.custo) : 0;
-          custo += (custoProduto * item.quantidade);
+          custo += (custoProduto * (item.quantidade || 0));
         });
       }
     });
@@ -163,13 +189,19 @@ export default function Relatorios() {
                 {vendasFiltradas.length === 0 ? (
                   <tr><td colSpan={3} className="p-6 text-center text-gray-500">Nenhuma venda encontrada.</td></tr>
                 ) : (
-                  vendasFiltradas.map(venda => (
-                    <tr key={venda.id} className="hover:bg-gray-50 border-b border-gray-50">
-                      <td className="p-3 text-gray-600">{new Date(venda.criado_em).toLocaleString('pt-BR')}</td>
-                      <td className="p-3"><span className="bg-gray-200 text-gray-700 px-2 py-1 rounded text-[10px] font-bold">{venda.forma_pagamento}</span></td>
-                      <td className="p-3 font-bold text-blue-600 text-right">R$ {Number(venda.total).toFixed(2).replace('.', ',')}</td>
-                    </tr>
-                  ))
+                  vendasFiltradas.map(venda => {
+                    // Proteção extra na hora de exibir a data
+                    const dataReal = venda.criado_em || (venda as any).createdAt || (venda as any).data_venda;
+                    const dataFormatada = dataReal ? new Date(dataReal).toLocaleString('pt-BR') : 'Data Indisponível';
+
+                    return (
+                      <tr key={venda.id} className="hover:bg-gray-50 border-b border-gray-50">
+                        <td className="p-3 text-gray-600">{dataFormatada}</td>
+                        <td className="p-3"><span className="bg-gray-200 text-gray-700 px-2 py-1 rounded text-[10px] font-bold">{venda.forma_pagamento}</span></td>
+                        <td className="p-3 font-bold text-blue-600 text-right">R$ {Number(venda.total).toFixed(2).replace('.', ',')}</td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
