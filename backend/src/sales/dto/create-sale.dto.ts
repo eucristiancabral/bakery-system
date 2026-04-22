@@ -11,4 +11,5 @@ export class CreateSaleDto {
   forma_pagamento!: FormaPagamento;
   itens!: ItemVendaDto[]; 
   caixa_id!: number;
+  cliente_id?: number;
 }

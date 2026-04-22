@@ -6,6 +6,7 @@ export enum FormaPagamento {
   DINHEIRO = 'DINHEIRO',
   CARTAO_CREDITO = 'CARTAO_CREDITO',
   CARTAO_DEBITO = 'CARTAO_DEBITO',
+  FIADO = 'FIADO',
 }
 
 export enum StatusVenda {
@@ -36,4 +37,7 @@ export class Venda {
 
   @Column({ nullable: true }) // Deixamos nullable por enquanto para não quebrar as vendas antigas que você já fez
   caixa_id!: number;
+
+  @Column({ nullable: true })
+  cliente_id!: number; // ID do cliente, se houver
 }

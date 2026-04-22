@@ -6,11 +6,13 @@ import { Venda } from './entities/venda.entity';
 import { ItemVenda } from './entities/item-venda.entity';
 import { Product } from '../products/entities/product.entity';
 import { Stock } from '../products/entities/stock.entity';
-import { MovimentacaoEstoque } from '../stock/entities/movimentacao-estoque.entity';
+import { CustomersModule } from '../customers/customers.module'; // <-- IMPORTAÇÃO DO MÓDULO
 
 @Module({
-  // Injetamos todas as 5 tabelas que a transação de venda vai precisar manipular!
-  imports: [TypeOrmModule.forFeature([Venda, ItemVenda, Product, Stock, MovimentacaoEstoque])],
+  imports: [
+    TypeOrmModule.forFeature([Venda, ItemVenda, Product, Stock]),
+    CustomersModule, // <-- ADICIONE O MÓDULO AQUI NA LISTA DE IMPORTS
+  ],
   controllers: [SalesController],
   providers: [SalesService],
 })

@@ -7,10 +7,16 @@ import { ItemVenda } from './entities/item-venda.entity';
 import { Product } from '../products/entities/product.entity';
 import { Stock } from '../products/entities/stock.entity';
 import { MovimentacaoEstoque, TipoMovimento, MotivoMovimento } from '../stock/entities/movimentacao-estoque.entity';
+// IMPORTANTE: Importar o serviço de clientes
+import { CustomersService } from '../customers/customers.service';
 
 @Injectable()
 export class SalesService {
-  constructor(@InjectDataSource() private dataSource: DataSource) {}
+  // Adicionamos o CustomersService no construtor
+  constructor(
+    @InjectDataSource() private dataSource: DataSource,
+    private readonly customersService: CustomersService,
+  ) {}
 
   async create(createSaleDto: CreateSaleDto) {
     // 1. Validação Básica
@@ -45,23 +51,33 @@ export class SalesService {
           itensProcessados.push({
             produto_id: produto.id,
             quantidade: itemDto.quantidade,
-            preco_unitario: produto.preco_venda, // Congelamos o preço oficial do banco
+            preco_unitario: Number(produto.preco_venda),
             subtotal: subtotal,
           });
         }
 
-        // 3. Salvar o Cabeçalho da Venda
+        // 3. Salvar o Cabeçalho da Venda (Agora com cliente_id)
         const novaVenda = manager.create(Venda, {
           total: valorTotalVenda,
           forma_pagamento: createSaleDto.forma_pagamento,
-          caixa_id: createSaleDto.caixa_id, // <-- ADICIONE ESTA LINHA AQUI!
+          caixa_id: createSaleDto.caixa_id,
+          cliente_id: createSaleDto.cliente_id, // <-- VINCULA O CLIENTE AQUI!
         });
         const vendaSalva = await manager.save(novaVenda);
 
-        // 4. Salvar Itens, Baixar Estoque e Registrar Auditoria
+        // 4. LÓGICA DO FIADO: Se for fiado, aumenta a dívida do cliente
+        if (createSaleDto.forma_pagamento === 'FIADO') {
+          if (!createSaleDto.cliente_id) {
+            throw new BadRequestException('Para vendas no FIADO, é obrigatório selecionar um cliente.');
+          }
+          // Chamamos o serviço de cliente para atualizar o saldo
+          await this.customersService.atualizarSaldo(createSaleDto.cliente_id, valorTotalVenda);
+        }
+
+        // 5. Salvar Itens, Baixar Estoque e Registrar Auditoria
         for (const item of itensProcessados) {
           
-          // 4.1 Salvar Item da Venda
+          // 5.1 Salvar Item da Venda
           const novoItemVenda = manager.create(ItemVenda, {
             venda_id: vendaSalva.id,
             produto_id: item.produto_id,
@@ -71,25 +87,24 @@ export class SalesService {
           });
           await manager.save(novoItemVenda);
 
-          // 4.2 Baixar Estoque Atual
+          // 5.2 Baixar Estoque Atual
           const estoque = await manager.findOne(Stock, { where: { produto_id: item.produto_id } });
           if (estoque) {
             estoque.quantidade = Number(estoque.quantidade) - Number(item.quantidade);
             await manager.save(estoque);
           }
 
-          // 4.3 Registrar Histórico de Movimentação (Saída por Venda)
+          // 5.3 Registrar Histórico de Movimentação
           const movimentacao = manager.create(MovimentacaoEstoque, {
             produto_id: item.produto_id,
             tipo_movimento: TipoMovimento.SAIDA,
             motivo: MotivoMovimento.VENDA,
             quantidade: item.quantidade,
-            referencia_id: vendaSalva.id, // O ID da venda serve como "Nota Fiscal"
+            referencia_id: vendaSalva.id,
           });
           await manager.save(movimentacao);
         }
 
-        // Se chegou até aqui, o TypeORM dá o COMMIT no MySQL!
         return {
           mensagem: 'Venda finalizada com sucesso!',
           venda_id: vendaSalva.id,
@@ -97,22 +112,19 @@ export class SalesService {
         };
 
       } catch (error) {
-        // Se já for um erro HTTP tratado (NotFound ou BadRequest), nós o repassamos
         if (error instanceof NotFoundException || error instanceof BadRequestException) {
           throw error;
         }
-        // Se for erro de banco, lançamos Erro Interno do Servidor (500)
         const errorMessage = error instanceof Error ? error.message : String(error);
         throw new InternalServerErrorException(`Erro crítico ao processar venda: ${errorMessage}`);
       }
     });
   }
-  // Busca todas as vendas ordenadas da mais recente para a mais antiga
+
   async findAll() {
     return this.dataSource.getRepository(Venda).find({
-      relations: ['itens', 'itens.produto'], // <-- ADICIONE ESTA LINHA!
+      relations: ['itens', 'itens.produto'],
       order: { criado_em: 'DESC' }
     });
   }
-  // Os outros métodos (findAll, findOne, etc) podem ficar aqui embaixo intocados...
 }

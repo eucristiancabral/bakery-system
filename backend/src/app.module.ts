@@ -3,11 +3,13 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ProductsModule } from './products/products.module';
 import { SalesModule } from './sales/sales.module';
 import { StockModule } from './stock/stock.module';
-import { AuthModule } from './auth/auth.module';   // <-- AQUI
-import { UsersModule } from './users/users.module'; // <-- AQUI
+import { AuthModule } from './auth/auth.module';
+import { UsersModule } from './users/users.module';
 import { Usuario } from './users/user.entity';
 import { Caixa } from './caixas/entities/caixa.entity';
 import { CaixasModule } from './caixas/caixas.module';
+import { Cliente } from './customers/entities/customer.entity';
+import { CustomersModule } from './customers/customers.module';
 
 @Module({
   imports: [
@@ -15,18 +17,20 @@ import { CaixasModule } from './caixas/caixas.module';
       type: 'mysql',
       host: 'localhost',
       port: 3306,
-      username: 'root', // Ajuste aqui
-      password: '123456', // Ajuste aqui
+      username: 'root', 
+      password: '123456', 
       database: 'padaria_db',
-      entities: [__dirname + '/**/*.entity{.ts,.js}', Usuario], // Garanta que a entidade Usuario seja lida
+      // Adicionamos as novas entidades aqui para o TypeORM gerenciar as tabelas
+      entities: [__dirname + '/**/*.entity{.ts,.js}', Usuario, Caixa, Cliente], 
       synchronize: true,
     }),
     ProductsModule,
     SalesModule,
     StockModule,
-    AuthModule,  // <-- AQUI
+    AuthModule,  
     UsersModule,
-    CaixasModule, // <-- AQUI
+    CaixasModule,
+    CustomersModule, // <-- ADICIONADO AQUI
   ],
 })
 export class AppModule {}

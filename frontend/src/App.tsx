@@ -3,10 +3,10 @@ import { BrowserRouter, Routes, Route, Link, Navigate, useNavigate } from 'react
 import PDV from './pages/PDV';
 import Admin from './pages/Admin';
 import Relatorios from './pages/Relatorios';
+import Clientes from './pages/Clientes'; // <-- NOVA IMPORTAÇÃO
 import Login from './pages/Login';
 
-// COMPONENTE DE PROTEÇÃO DE ROTA (A Fechadura)
-// Ele verifica se existe um token no localStorage. Se não existir, redireciona para o /login
+// COMPONENTE DE PROTEÇÃO DE ROTA
 const RotaProtegida = ({ children }: { children: JSX.Element }) => {
   const token = localStorage.getItem('token');
   if (!token) {
@@ -15,7 +15,7 @@ const RotaProtegida = ({ children }: { children: JSX.Element }) => {
   return children;
 };
 
-// COMPONENTE DE MENU (Para podermos usar o useNavigate e fazer o Logout)
+// COMPONENTE DE MENU
 const MenuNavegacao = () => {
   const navigate = useNavigate();
   const perfil = localStorage.getItem('user_perfil');
@@ -27,15 +27,15 @@ const MenuNavegacao = () => {
   };
 
   return (
-    // ADICIONADO 'print:hidden' AQUI PARA ESCONDER NA HORA DE IMPRIMIR O CUPOM
     <nav className="bg-gray-900 text-white p-4 flex justify-between items-center shadow-md print:hidden">
       <div className="flex gap-6">
         <Link to="/" className="hover:text-blue-400 font-bold transition-colors">🛒 Caixa (PDV)</Link>
         
-        {/* Futuramente, podemos esconder esses menus se o perfil for apenas 'CAIXA' */}
         {perfil === 'ADMIN' && (
           <>
             <Link to="/admin" className="hover:text-blue-400 font-bold transition-colors">⚙️ Gestão</Link>
+            {/* NOVO LINK DE CLIENTES */}
+            <Link to="/clientes" className="hover:text-blue-400 font-bold transition-colors">👥 Clientes</Link>
             <Link to="/relatorios" className="hover:text-blue-400 font-bold transition-colors">📊 Relatórios</Link>
           </>
         )}
@@ -55,10 +55,10 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* ROTA PÚBLICA (Qualquer um acessa) */}
+        {/* ROTA PÚBLICA */}
         <Route path="/login" element={<Login />} />
 
-        {/* ROTAS PRIVADAS (Só com Token) */}
+        {/* ROTAS PRIVADAS */}
         <Route path="/" element={
           <RotaProtegida>
             <>
@@ -73,6 +73,16 @@ function App() {
             <>
               <MenuNavegacao />
               <Admin />
+            </>
+          </RotaProtegida>
+        } />
+
+        {/* NOVA ROTA DE CLIENTES */}
+        <Route path="/clientes" element={
+          <RotaProtegida>
+            <>
+              <MenuNavegacao />
+              <Clientes />
             </>
           </RotaProtegida>
         } />
