@@ -33,4 +33,7 @@ export class Venda {
   // Relacionamento: Uma Venda tem Muitos Itens
   @OneToMany(() => ItemVenda, (item) => item.venda)
   itens!: ItemVenda[];
+
+  @Column({ nullable: true }) // Deixamos nullable por enquanto para não quebrar as vendas antigas que você já fez
+  caixa_id!: number;
 }

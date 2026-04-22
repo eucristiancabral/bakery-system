@@ -9,5 +9,6 @@ export class ItemVendaDto {
 // DTO Principal que o Frontend vai enviar
 export class CreateSaleDto {
   forma_pagamento!: FormaPagamento;
-  itens!: ItemVendaDto[]; // Um array de itens
+  itens!: ItemVendaDto[]; 
+  caixa_id!: number;
 }

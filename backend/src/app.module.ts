@@ -6,6 +6,8 @@ import { StockModule } from './stock/stock.module';
 import { AuthModule } from './auth/auth.module';   // <-- AQUI
 import { UsersModule } from './users/users.module'; // <-- AQUI
 import { Usuario } from './users/user.entity';
+import { Caixa } from './caixas/entities/caixa.entity';
+import { CaixasModule } from './caixas/caixas.module';
 
 @Module({
   imports: [
@@ -23,7 +25,8 @@ import { Usuario } from './users/user.entity';
     SalesModule,
     StockModule,
     AuthModule,  // <-- AQUI
-    UsersModule, // <-- AQUI
+    UsersModule,
+    CaixasModule, // <-- AQUI
   ],
 })
 export class AppModule {}

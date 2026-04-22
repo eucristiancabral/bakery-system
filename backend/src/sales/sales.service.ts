@@ -54,6 +54,7 @@ export class SalesService {
         const novaVenda = manager.create(Venda, {
           total: valorTotalVenda,
           forma_pagamento: createSaleDto.forma_pagamento,
+          caixa_id: createSaleDto.caixa_id, // <-- ADICIONE ESTA LINHA AQUI!
         });
         const vendaSalva = await manager.save(novaVenda);
 
